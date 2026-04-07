@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>季節の遊び・体験リスト</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;background:#f7f5f2;min-height:100vh}
+button{cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent}
+input{font-family:inherit}
+
+header{background:#fff;border-bottom:1px solid #e8e4de;position:sticky;top:0;z-index:50}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px}
+.title{font-size:13px;font-weight:600;color:#2d2926;letter-spacing:.03em;white-space:nowrap}
+.filter-wrap{display:flex;gap:2px;background:#f3f1ee;border-radius:20px;padding:2px 3px;flex-shrink:0}
+.filter-btn{padding:4px 10px;border-radius:14px;font-size:11px;font-weight:500;color:#7a7269;background:transparent;border:none}
+.filter-btn.on{background:#fff;color:#2d2926;box-shadow:0 1px 3px rgba(0,0,0,.09)}
+.tabs-row{display:flex;overflow-x:auto;padding:0 6px;border-top:1px solid #f0ede8;scrollbar-width:none}
+.tabs-row::-webkit-scrollbar{display:none}
+.tab{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 18px;background:transparent;border:none;border-bottom:2.5px solid transparent;flex-shrink:0}
+
+main{max-width:680px;margin:0 auto;padding:10px 12px 64px}
+.s-head{border-radius:12px 12px 0 0;padding:12px 14px 10px;border:1px solid;border-bottom:none}
+.s-head-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.s-name{font-size:18px;font-weight:600;flex:1;letter-spacing:.04em}
+.s-count{font-size:12px;font-weight:500}
+.edit-toggle{font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;border:1px solid;flex-shrink:0;transition:all .15s}
+.bar-bg{height:3px;background:rgba(0,0,0,.07);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;transition:width .4s ease}
+.cat-box{border:1px solid;border-top:none;border-radius:0 0 12px 12px;background:#fff;overflow:hidden}
+.cat-block{padding:10px 12px 9px}
+.cat-block+.cat-block{border-top:1px solid}
+.cat-head{display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.cat-name{font-size:11px;font-weight:600;letter-spacing:.05em;flex:1}
+.cat-cnt{font-size:10px;font-weight:500;opacity:.85}
+.list{display:flex;flex-direction:column;gap:4px}
+.card{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:9px;border:1px solid #eae7e2;background:#fff;width:100%;min-height:44px;text-align:left;cursor:pointer;transition:background .12s,border-color .12s}
+.card.done{background:#faf9f7}
+.card-txt{font-size:14px;font-weight:400;flex:1;line-height:1.4;color:#2d2926}
+.card-txt.done{color:#bbb6af;text-decoration:line-through;text-decoration-color:#ccc8c0}
+.check{font-size:13px;font-weight:700;flex-shrink:0;visibility:hidden}
+.check.done{visibility:visible}
+.del-btn{font-size:14px;background:transparent;border:none;padding:2px 4px;border-radius:6px;color:#e05555;flex-shrink:0}
+.inline-input{flex:1;font-size:14px;border:none;outline:none;background:transparent;color:#2d2926;padding:0}
+.add-row{margin-top:6px}
+.add-form{display:flex;gap:6px}
+.emoji-btn{font-size:18px;width:40px;height:40px;border-radius:9px;border:1px dashed;background:transparent;flex-shrink:0}
+.add-input{flex:1;font-size:13px;padding:8px 10px;border-radius:9px;border:1px dashed #ddd;background:#fafafa;color:#555;outline:none}
+.add-btn{font-size:12px;font-weight:600;color:#fff;padding:8px 12px;border-radius:9px;border:none;flex-shrink:0}
+.picker{margin-top:6px;padding:10px 8px;background:#fff;border:1px solid;border-radius:10px;display:flex;flex-wrap:wrap;gap:4px}
+.picker-btn{font-size:20px;width:36px;height:36px;border-radius:7px;border:1px solid transparent;background:transparent}
+.picker-btn.sel{border-width:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <span class="title">季節の遊び・体験リスト</span>
+    <div class="filter-wrap" id="filterWrap"></div>
+  </div>
+  <div class="tabs-row" id="tabsRow"></div>
+</header>
+<main id="main"></main>
+
+<script>
+const DONE_KEY = "seasonal-done-v3";
+const DATA_KEY = "seasonal-data-v3";
+
+const INITIAL = [
+  {id:"spring",name:"春",emoji:"🌸",accent:"#d4749a",light:"#fdf0f5",border:"#f3c2d5",tag:"#b5446e",categories:[
+    {id:"look",name:"見る・探す",icon:"👀",items:[
+      {id:"sp-l1",label:"桜を見る",emoji:"🌸"},{id:"sp-l2",label:"チューリップを見る",emoji:"🌷"},
+      {id:"sp-l3",label:"カラスノエンドウを探す",emoji:"🌿"},{id:"sp-l4",label:"たんぽぽを探す",emoji:"🌼"},
+      {id:"sp-l5",label:"つくしを探す",emoji:"🌱"},{id:"sp-l6",label:"菜の花を探す",emoji:"🌻"},
+      {id:"sp-l7",label:"鯉のぼりを見る",emoji:"🎏"},{id:"sp-l8",label:"梅を見る",emoji:"🌺"},
+    ]},
+    {id:"experience",name:"体験する",icon:"🤲",items:[
+      {id:"sp-e1",label:"いちご狩り",emoji:"🍓"},{id:"sp-e2",label:"たけのこ掘り",emoji:"🎋"},
+      {id:"sp-e3",label:"スナップエンドウを収穫",emoji:"🫛"},{id:"sp-e4",label:"潮干狩り",emoji:"🐚"},
+      {id:"sp-e5",label:"田植え",emoji:"🌾"},{id:"sp-e6",label:"夏野菜の種まき",emoji:"🌱"},
+      {id:"sp-e7",label:"春の草花遊び",emoji:"🌿"},{id:"sp-e8",label:"庭探検",emoji:"🔍"},
+    ]},
+    {id:"talk",name:"お話しする",icon:"💬",items:[
+      {id:"sp-t1",label:"春に咲く花の話",emoji:"🌸"},{id:"sp-t2",label:"こどもの日のお話",emoji:"🎏"},
+      {id:"sp-t3",label:"こどもの日の歌を歌う",emoji:"🎵"},{id:"sp-t4",label:"春の歌を歌う",emoji:"🎶"},
+      {id:"sp-t5",label:"お米の育ち方を調べる",emoji:"🍚"},{id:"sp-t6",label:"田んぼを見に行く",emoji:"🌾"},
+      {id:"sp-t7",label:"新しい学年のお話",emoji:"📚"},
+    ]},
+    {id:"other",name:"その他",icon:"✨",items:[
+      {id:"sp-o1",label:"春にまつわる絵本を読む",emoji:"📖"},{id:"sp-o2",label:"公園でピクニックをする",emoji:"🧺"},
+      {id:"sp-o3",label:"スーパーで春のお野菜を見る",emoji:"🥦"},{id:"sp-o4",label:"いちごを食べる",emoji:"🍓"},
+      {id:"sp-o5",label:"菜の花や苦味のある春野菜を食べる",emoji:"🥬"},
+    ]},
+  ]},
+  {id:"summer",name:"夏",emoji:"🌊",accent:"#3b9dd4",light:"#f0f9ff",border:"#b9dff5",tag:"#0369a1",categories:[
+    {id:"look",name:"見る・探す",icon:"👀",items:[
+      {id:"su-l1",label:"ひまわりを見る",emoji:"🌻"},{id:"su-l2",label:"セミを探す",emoji:"🦗"},
+      {id:"su-l3",label:"カブトムシを見る",emoji:"🐛"},{id:"su-l4",label:"星を見る",emoji:"⭐"},
+      {id:"su-l5",label:"朝顔を見る",emoji:"🌺"},
+    ]},
+    {id:"experience",name:"体験する",icon:"🤲",items:[
+      {id:"su-e1",label:"七夕飾りを作る",emoji:"🎋"},{id:"su-e2",label:"プール",emoji:"🏊"},
+      {id:"su-e3",label:"海や川で遊ぶ",emoji:"🌊"},{id:"su-e4",label:"昆虫探し",emoji:"🦋"},
+      {id:"su-e5",label:"夏祭り",emoji:"🏮"},{id:"su-e6",label:"花火を見る",emoji:"🎆"},
+      {id:"su-e7",label:"野菜の収穫体験",emoji:"🥒"},{id:"su-e8",label:"水あそび",emoji:"💦"},
+      {id:"su-e9",label:"プラネタリウム",emoji:"🌌"},
+    ]},
+    {id:"talk",name:"お話しする",icon:"💬",items:[
+      {id:"su-t1",label:"七夕のお話",emoji:"🎋"},{id:"su-t2",label:"夏の虫のお話",emoji:"🦗"},
+      {id:"su-t3",label:"海や川の生き物のお話",emoji:"🐟"},{id:"su-t4",label:"夏の星座のお話",emoji:"🌟"},
+      {id:"su-t5",label:"暑い日の過ごし方のお話",emoji:"☀️"},
+    ]},
+    {id:"other",name:"その他",icon:"✨",items:[
+      {id:"su-o1",label:"かき氷を食べる",emoji:"🍧"},{id:"su-o2",label:"スイカ割り",emoji:"🍉"},
+      {id:"su-o3",label:"風鈴を楽しむ",emoji:"🎐"},{id:"su-o4",label:"夏の絵本を読む",emoji:"📖"},
+    ]},
+  ]},
+  {id:"autumn",name:"秋",emoji:"🍂",accent:"#c4671a",light:"#fff8f0",border:"#f5cfaa",tag:"#9a3412",categories:[
+    {id:"look",name:"見る・探す",icon:"👀",items:[
+      {id:"au-l1",label:"どんぐりを探す",emoji:"🌰"},{id:"au-l2",label:"落ち葉を集める",emoji:"🍂"},
+      {id:"au-l3",label:"紅葉を見る",emoji:"🍁"},{id:"au-l4",label:"お月さまを見る",emoji:"🌕"},
+      {id:"au-l5",label:"トンボを探す",emoji:"🪲"},{id:"au-l6",label:"コスモスを見る",emoji:"🌸"},
+    ]},
+    {id:"experience",name:"体験する",icon:"🤲",items:[
+      {id:"au-e1",label:"芋掘り",emoji:"🍠"},{id:"au-e2",label:"稲刈り",emoji:"🌾"},
+      {id:"au-e3",label:"ぶどう狩り",emoji:"🍇"},{id:"au-e4",label:"キウイ狩り",emoji:"🥝"},
+      {id:"au-e5",label:"梨狩り",emoji:"🍐"},{id:"au-e6",label:"りんご狩り",emoji:"🍎"},
+      {id:"au-e7",label:"栗拾い",emoji:"🌰"},
+    ]},
+    {id:"talk",name:"お話しする",icon:"💬",items:[
+      {id:"au-t1",label:"お月見のお話",emoji:"🌕"},{id:"au-t2",label:"実りの秋のお話",emoji:"🌾"},
+      {id:"au-t3",label:"新米のお話",emoji:"🍚"},{id:"au-t4",label:"秋の虫のお話",emoji:"🦗"},
+      {id:"au-t5",label:"収穫のお話",emoji:"🧺"},
+    ]},
+    {id:"other",name:"その他",icon:"✨",items:[
+      {id:"au-o1",label:"焼き芋",emoji:"🍠"},{id:"au-o2",label:"木の実で工作",emoji:"🌰"},
+      {id:"au-o3",label:"運動会",emoji:"🏃"},{id:"au-o4",label:"ハイキング",emoji:"🥾"},
+      {id:"au-o5",label:"秋の絵本を読む",emoji:"📖"},
+    ]},
+  ]},
+  {id:"winter",name:"冬",emoji:"❄️",accent:"#4a7fc4",light:"#f2f5fc",border:"#c0d0ee",tag:"#1e3a8a",categories:[
+    {id:"look",name:"見る・探す",icon:"👀",items:[
+      {id:"wi-l1",label:"雪を見る",emoji:"❄️"},{id:"wi-l2",label:"霜や氷を見る",emoji:"🧊"},
+      {id:"wi-l3",label:"冬の星座を見る",emoji:"⭐"},{id:"wi-l4",label:"冬鳥を探す",emoji:"🐦"},
+      {id:"wi-l5",label:"梅のつぼみを見る",emoji:"🌺"},
+    ]},
+    {id:"experience",name:"体験する",icon:"🤲",items:[
+      {id:"wi-e1",label:"クリスマス飾り",emoji:"🎄"},{id:"wi-e2",label:"餅つき",emoji:"🍡"},
+      {id:"wi-e3",label:"初詣",emoji:"⛩️"},{id:"wi-e4",label:"書き初め",emoji:"🖌️"},
+      {id:"wi-e5",label:"凧あげ",emoji:"🪁"},{id:"wi-e6",label:"こま回し",emoji:"🌀"},
+      {id:"wi-e7",label:"羽根つき",emoji:"🏸"},{id:"wi-e8",label:"豆まき",emoji:"🫘"},
+      {id:"wi-e9",label:"雪遊び",emoji:"⛄"},{id:"wi-e10",label:"スケート",emoji:"⛸️"},
+    ]},
+    {id:"talk",name:"お話しする",icon:"💬",items:[
+      {id:"wi-t1",label:"クリスマスのお話",emoji:"🎄"},{id:"wi-t2",label:"お正月のお話",emoji:"🎍"},
+      {id:"wi-t3",label:"十二支のお話",emoji:"🐭"},{id:"wi-t4",label:"節分のお話",emoji:"👹"},
+      {id:"wi-t5",label:"冬の過ごし方のお話",emoji:"🧤"},
+    ]},
+    {id:"other",name:"その他",icon:"✨",items:[
+      {id:"wi-o1",label:"みかんを食べる",emoji:"🍊"},{id:"wi-o2",label:"鍋のお手伝い",emoji:"🍲"},
+      {id:"wi-o3",label:"年賀状づくり",emoji:"💌"},{id:"wi-o4",label:"大掃除のお手伝い",emoji:"🧹"},
+      {id:"wi-o5",label:"冬の絵本を読む",emoji:"📖"},
+    ]},
+  ]},
+];
+
+const EMOJIS = ["🌸","🌼","🌻","🌺","🌹","🌷","🌿","🍀","🌱","🌾","🍁","🍂","🍃","🍓","🍎","🍊","🍋","🍇","🍉","🍑","🍒","🥝","🥦","🥬","🌽","🥕","🐶","🐱","🐰","🐻","🐼","🐨","🦊","🐸","🦋","🐛","🐝","🐞","🦗","🐟","🐠","🐚","🦀","🦑","🐙","🐬","🌊","⭐","🌙","☀️","❄️","🌈","🎋","🎏","🎆","🎇","🎄","🎍","🎎","🏮","🎵","🎶","📖","📚","🖌️","🧺","🧹","🍡","🍧","🍚","🍲","🍊","🏃","🥾","🏊","💦","🔍","✨"];
+
+let seasons, done, activeSeason, filter, editMode, pickerTarget;
+
+function load() {
+  try { seasons = JSON.parse(localStorage.getItem(DATA_KEY)) || INITIAL; } catch { seasons = INITIAL; }
+  try { done = JSON.parse(localStorage.getItem(DONE_KEY)) || {}; } catch { done = {}; }
+  activeSeason = "spring";
+  filter = "all";
+  editMode = false;
+}
+
+function save() {
+  localStorage.setItem(DATA_KEY, JSON.stringify(seasons));
+  localStorage.setItem(DONE_KEY, JSON.stringify(done));
+}
+
+function genId() { return Math.random().toString(36).slice(2,9); }
+
+function getTotals(s) {
+  const all = s.categories.flatMap(c=>c.items);
+  return {total: all.length, doneCount: all.filter(i=>done[i.id]).length};
+}
+
+function filterItems(items) {
+  if (editMode) return items;
+  if (filter==="done") return items.filter(i=>done[i.id]);
+  if (filter==="undone") return items.filter(i=>!done[i.id]);
+  return items;
+}
+
+function render() {
+  renderFilters();
+  renderTabs();
+  renderMain();
+}
+
+function renderFilters() {
+  const fw = document.getElementById("filterWrap");
+  fw.innerHTML = "";
+  [["all","すべて"],["undone","未達成"],["done","達成済み"]].forEach(([v,l]) => {
+    const b = document.createElement("button");
+    b.className = "filter-btn" + (filter===v&&!editMode?" on":"");
+    b.textContent = l;
+    b.onclick = () => { filter=v; editMode=false; render(); };
+    fw.appendChild(b);
+  });
+}
+
+function renderTabs() {
+  const tr = document.getElementById("tabsRow");
+  tr.innerHTML = "";
+  seasons.forEach(s => {
+    const {total,doneCount} = getTotals(s);
+    const active = activeSeason===s.id;
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.style.borderBottomColor = active ? s.accent : "transparent";
+    b.innerHTML = `<span style="font-size:18px">${s.emoji}</span>
+      <span style="font-size:13px;font-weight:${active?600:400};color:${active?s.tag:'#999'}">${s.name}</span>
+      <span style="font-size:10px;color:${active?s.accent:'#ccc'}">${doneCount}/${total}</span>`;
+    b.onclick = () => { activeSeason=s.id; editMode=false; render(); };
+    tr.appendChild(b);
+  });
+}
+
+function renderMain() {
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+  const s = seasons.find(s=>s.id===activeSeason);
+  const {total,doneCount} = getTotals(s);
+  const pct = total ? Math.round(doneCount/total*100) : 0;
+
+  // Season header
+  const sh = document.createElement("div");
+  sh.className = "s-head";
+  sh.style.cssText = `background:${s.light};border-color:${s.border}`;
+  sh.innerHTML = `
+    <div class="s-head-top">
+      <span style="font-size:20px">${s.emoji}</span>
+      <span class="s-name" style="color:${s.tag}">${s.name}</span>
+      <span class="s-count" style="color:${s.accent}">${doneCount} / ${total}</span>
+      <button class="edit-toggle" id="editToggle"
+        style="background:${editMode?s.accent:'transparent'};border-color:${editMode?s.accent:s.border};color:${editMode?'#fff':s.tag}">
+        ${editMode?"✅ 完了":"✏️ 編集"}
+      </button>
+    </div>
+    <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${s.accent}"></div></div>`;
+  sh.querySelector("#editToggle").onclick = () => { editMode=!editMode; render(); };
+  main.appendChild(sh);
+
+  // Categories
+  const cb = document.createElement("div");
+  cb.className = "cat-box";
+  cb.style.borderColor = s.border;
+
+  s.categories.forEach(cat => {
+    const catDone = cat.items.filter(i=>done[i.id]).length;
+    const visible = filterItems(cat.items);
+    const cd = document.createElement("div");
+    cd.className = "cat-block";
+    cd.style.borderColor = s.border;
+
+    cd.innerHTML = `<div class="cat-head">
+      <span style="font-size:12px">${cat.icon}</span>
+      <span class="cat-name" style="color:${s.tag}">${cat.name}</span>
+      <span class="cat-cnt" style="color:${s.accent}">${catDone}/${cat.items.length}</span>
+    </div>`;
+
+    const list = document.createElement("div");
+    list.className = "list";
+
+    visible.forEach(item => {
+      const isDone = !!done[item.id];
+      const card = document.createElement("div");
+      card.className = "card" + (isDone?" done":"");
+      if (isDone) card.style.borderColor = s.border;
+
+      if (editMode) {
+        card.style.cursor = "default";
+        card.innerHTML = `<span style="font-size:16px;flex-shrink:0">${item.emoji}</span>
+          <input class="inline-input" value="${item.label.replace(/"/g,'&quot;')}">
+          <button class="del-btn">✕</button>`;
+        const inp = card.querySelector("input");
+        inp.onblur = () => {
+          if (inp.value.trim()) {
+            item.label = inp.value.trim();
+            save(); render();
+          }
+        };
+        inp.onkeydown = e => { if(e.key==="Enter") inp.blur(); };
+        card.querySelector(".del-btn").onclick = () => {
+          cat.items = cat.items.filter(i=>i.id!==item.id);
+          save(); render();
+        };
+      } else {
+        card.innerHTML = `<span style="font-size:16px;flex-shrink:0">${item.emoji}</span>
+          <span class="card-txt${isDone?' done':''}">${item.label}</span>
+          <span class="check${isDone?' done':''}" style="color:${s.accent}">✓</span>`;
+        card.onclick = () => { done[item.id]=!done[item.id]; save(); render(); };
+      }
+
+      list.appendChild(card);
+    });
+
+    cd.appendChild(list);
+
+    // Add row in edit mode
+    if (editMode) {
+      const ar = document.createElement("div");
+      ar.className = "add-row";
+      const rowId = cat.id + "-" + s.id;
+      let selEmoji = "⭐";
+      let pickerOpen = false;
+
+      ar.innerHTML = `
+        <div class="add-form">
+          <button class="emoji-btn" id="eb-${rowId}" style="border-color:${s.border}">${selEmoji}</button>
+          <input class="add-input" id="ai-${rowId}" placeholder="＋ 項目を追加..." style="border-color:${s.border}">
+          <button class="add-btn" id="ab-${rowId}" style="background:${s.accent}">追加</button>
+        </div>
+        <div class="picker" id="pk-${rowId}" style="display:none;border-color:${s.border}">
+          ${EMOJIS.map(e=>`<button class="picker-btn" data-e="${e}" style="border-color:${e===selEmoji?s.accent:'transparent'}">${e}</button>`).join("")}
+        </div>`;
+
+      const eb = ar.querySelector(`#eb-${rowId}`);
+      const ai = ar.querySelector(`#ai-${rowId}`);
+      const ab = ar.querySelector(`#ab-${rowId}`);
+      const pk = ar.querySelector(`#pk-${rowId}`);
+
+      eb.onclick = () => {
+        pickerOpen = !pickerOpen;
+        pk.style.display = pickerOpen ? "flex" : "none";
+        eb.style.borderColor = pickerOpen ? s.accent : s.border;
+      };
+      pk.querySelectorAll(".picker-btn").forEach(btn => {
+        btn.onclick = () => {
+          selEmoji = btn.dataset.e;
+          eb.textContent = selEmoji;
+          pickerOpen = false;
+          pk.style.display = "none";
+          pk.querySelectorAll(".picker-btn").forEach(b=>b.style.borderColor=b.dataset.e===selEmoji?s.accent:"transparent");
+        };
+      });
+      const doAdd = () => {
+        if (ai.value.trim()) {
+          cat.items.push({id:genId(),label:ai.value.trim(),emoji:selEmoji});
+          save(); render();
+        }
+      };
+      ab.onclick = doAdd;
+      ai.onkeydown = e => { if(e.key==="Enter") doAdd(); };
+
+      cd.appendChild(ar);
+    }
+
+    cb.appendChild(cd);
+  });
+
+  main.appendChild(cb);
+}
+
+load();
+render();
+</script>
+</body>
+</html>
